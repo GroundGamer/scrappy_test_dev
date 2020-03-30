@@ -1,8 +1,7 @@
 import scrapy
-from urllib.parse import urljoin
-from itertools import groupby
-import datetime
 from scrapy import cmdline
+from urllib.parse import urljoin
+import datetime
 import test_dev.items
 
 
@@ -11,16 +10,22 @@ class PycoderSpider(scrapy.Spider):
     visited_urls = []
     start_urls = [
         'https://www.wildberries.ru/catalog/obuv/zhenskaya/sabo-i-myuli/myuli?page=1',
-        'https://www.wildberries.ru/catalog/obuv/zhenskaya/sabo-i-myuli/myuli?page=2',
-        'https://www.wildberries.ru/catalog/obuv/zhenskaya/sabo-i-myuli/myuli?page=3',
     ]
 
     def parse(self, response):
         if response.url not in self.visited_urls:
+            self.visited_urls.append(response.url)
             for post_link in response.xpath(
                     '//div[@class="dtList i-dtList j-card-item"]/span/span/span/a/@href').extract():
                 url = urljoin(response.url, post_link)
                 yield response.follow(url, callback=self.parse_post)
+
+            next_pages = response.xpath(
+                    '//div[@class="pageToInsert"]/a/@href').extract()
+            next_page = next_pages[-1]
+
+            next_page_url = urljoin(response.url+'/', next_page)
+            yield response.follow(next_page_url, callback=self.parse)
 
     def parse_post(self, response):
         item = test_dev.items.PycoderItem()
